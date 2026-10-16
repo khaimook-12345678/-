@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ห้องทดลอง 3D ระบบประสาท: การส่งสัญญาณผ่านไขสันหลัง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#070d1c;--ink:#e8effc;--muted:#93a7c6;--blue:#60a5fa;--teal:#2dd4bf;--gold:#fbbf24;--pink:#f472b6;--glass:rgba(18,28,54,.62);--glass2:rgba(255,255,255,.06);--line:rgba(255,255,255,.12)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans Thai",system-ui,-apple-system,Tahoma,sans-serif;line-height:1.65}
+.app{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(380px,.8fr);height:100vh;overflow:hidden}
+.stage{position:relative;height:100vh;overflow:hidden;background:radial-gradient(120% 90% at 50% 0%,#14264d 0%,#0b1224 60%,#050914 100%)}
+#c{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#c:active{cursor:grabbing}
+.glass{background:var(--glass);backdrop-filter:blur(16px) saturate(140%);-webkit-backdrop-filter:blur(16px) saturate(140%);border:1px solid var(--line);box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.hud{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;pointer-events:none}
+.badge{pointer-events:auto;border-radius:14px;padding:9px 14px;font-weight:600;font-size:.92rem;display:flex;align-items:center;gap:8px}
+.badge i{width:9px;height:9px;border-radius:50%;background:var(--teal);box-shadow:0 0 12px var(--teal);animation:blink 1.8s infinite}
+.tools{pointer-events:auto;display:flex;gap:8px;flex-wrap:wrap}
+.tbtn{font:inherit;color:var(--ink);cursor:pointer;border:1px solid var(--line);background:var(--glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:12px;padding:8px 13px;font-weight:600;font-size:.88rem;transition:.2s}
+.tbtn:hover{background:rgba(96,165,250,.28);transform:translateY(-1px)}
+.tbtn.on{background:rgba(45,212,191,.28);border-color:var(--teal)}
+.hint{position:absolute;left:16px;bottom:14px;font-size:.8rem;color:var(--muted);pointer-events:none;background:rgba(7,13,28,.55);padding:5px 11px;border-radius:99px}
+#hotspots{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.hs{position:absolute;left:0;top:0;pointer-events:auto;border:0;background:none;color:var(--ink);font:inherit;cursor:pointer;display:flex;align-items:center;gap:8px;padding:0;will-change:transform;white-space:nowrap}
+.hs .dotp{position:relative;width:22px;height:22px;border-radius:50%;background:var(--c);border:3px solid #fff;box-shadow:0 0 0 0 var(--c),0 4px 14px rgba(0,0,0,.5);animation:pulse 2s infinite;flex:none}
+.hs .lbl{background:var(--glass);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid var(--line);border-radius:10px;padding:3px 10px;font-size:.82rem;font-weight:600;transition:.2s}
+.hs:hover .lbl,.hs.active .lbl{background:var(--c);color:#06101f}
+.hs.active .dotp{transform:scale(1.25)}
+.card{position:absolute;left:16px;right:16px;bottom:52px;max-width:470px;border-radius:20px;padding:18px 20px;opacity:0;transform:translateY(18px) scale(.97);pointer-events:none;transition:opacity .35s,transform .35s}
+.card.show{opacity:1;transform:none;pointer-events:auto}
+.card.swap{animation:swap .45s cubic-bezier(.2,.8,.2,1)}
+.card .tag{display:inline-block;background:var(--c);color:#06101f;font-weight:700;font-size:.78rem;border-radius:99px;padding:2px 11px}
+.card h3{margin:8px 0 4px;font-size:1.2rem}
+.card p{margin:0 0 8px;color:#cfdcf2;font-size:.94rem}
+.card .fact{background:rgba(251,191,36,.12);border-left:3px solid var(--gold);border-radius:8px;padding:7px 11px;font-size:.88rem;color:#fde9b0}
+.card .nav{display:flex;gap:8px;margin-top:12px}
+.card .nav button{font:inherit;font-weight:600;font-size:.85rem;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--glass2);color:var(--ink);padding:5px 13px}
+.card .nav button:hover{background:rgba(96,165,250,.3)}
+.card .nav .x{margin-left:auto}
+.panel{height:100vh;overflow-y:auto;padding:26px 24px 40px;background:linear-gradient(180deg,#0a1328,#070d1c);border-left:1px solid var(--line);scroll-behavior:smooth}
+.panel::-webkit-scrollbar{width:8px}.panel::-webkit-scrollbar-thumb{background:#1e2f55;border-radius:8px}
+.eyebrow{font-size:.85rem;color:var(--teal);font-weight:600;letter-spacing:.02em}
+h1{font-size:clamp(1.5rem,2.6vw,2.05rem);line-height:1.3;margin:6px 0 8px;background:linear-gradient(90deg,#fff,#93c5fd 60%,#5eead4);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--muted);margin:0 0 18px}
+.sec{background:var(--glass2);border:1px solid var(--line);border-radius:18px;padding:18px;margin:0 0 16px;animation:rise .6s both}
+h2{font-size:1.08rem;margin:0 0 10px}
+.sub{color:var(--muted);margin-top:0;font-size:.92rem}
+.objs{display:grid;gap:10px}
+.obj{background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.22);border-radius:12px;padding:10px 12px;font-size:.92rem}
+.obj b{color:#93c5fd}
+.control{background:rgba(0,0,0,.22);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:12px}
+.control label{font-weight:600;display:flex;justify-content:space-between;gap:8px;font-size:.95rem}
+.control output{color:var(--gold);font-variant-numeric:tabular-nums;font-weight:700}
+input[type=range]{width:100%;accent-color:var(--blue);margin:10px 0 2px}
+.small{font-size:.86rem;color:var(--muted)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.btn{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:10px 16px;font-weight:700;transition:.2s}
+.btn:hover{transform:translateY(-1px)}
+.primary{background:linear-gradient(135deg,#3b82f6,#2dd4bf);color:#04101f}
+.secondary{background:rgba(255,255,255,.1);color:var(--ink);border:1px solid var(--line)}
+.metrics{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.metric{background:rgba(0,0,0,.22);border:1px solid var(--line);padding:10px;border-radius:12px;text-align:center}
+.metric strong{display:block;font-size:1.4rem;color:var(--teal);font-variant-numeric:tabular-nums}
+.metric .small{font-size:.76rem;display:block;line-height:1.35}
+.note{border-left:4px solid var(--gold);padding:10px 14px;background:rgba(251,191,36,.1);border-radius:8px;font-size:.92rem;margin:12px 0 0}
+.steps{display:grid;gap:8px}
+.step{font:inherit;text-align:left;color:var(--ink);cursor:pointer;display:flex;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.2);transition:.25s}
+.step:hover{border-color:var(--c);transform:translateX(3px)}
+.step .n{flex:none;width:34px;height:34px;border-radius:50%;background:var(--c);color:#06101f;font-weight:700;display:grid;place-items:center;font-size:.9rem}
+.step b{display:block;font-size:.9rem}.step span.t{font-size:.86rem;color:var(--muted)}
+.step.live{border-color:var(--c);background:rgba(255,255,255,.1);box-shadow:0 0 0 1px var(--c),0 0 18px -4px var(--c)}
+.chartbox{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:rgba(0,0,0,.22);padding:6px}
+svg{width:100%;height:auto;display:block}
+.question{border:1px solid var(--line);border-radius:14px;padding:14px;margin:12px 0;background:rgba(0,0,0,.18)}
+.question p{margin:0 0 8px;font-weight:600}
+.question label{display:block;padding:7px 10px;margin:5px 0;border-radius:9px;cursor:pointer;font-size:.93rem;border:1px solid transparent;transition:.2s}
+.question label:hover{background:rgba(96,165,250,.14);border-color:rgba(96,165,250,.3)}
+.question input{margin-right:8px;accent-color:var(--teal)}
+.feedback{margin-top:8px;padding:10px 12px;border-radius:10px;display:none;font-size:.9rem}
+.feedback.show{display:block;animation:rise .4s both}
+.correct{background:rgba(34,197,94,.16);color:#86efac}
+.incorrect{background:rgba(244,63,94,.16);color:#fda4af}
+.answer-key{background:rgba(96,165,250,.1);border-radius:12px;padding:14px;margin-top:14px}
+.answer-key details{padding:8px 0;border-bottom:1px solid var(--line)}
+.answer-key summary{cursor:pointer;font-weight:600}
+.answer-key p{margin:6px 0 0;color:#cfdcf2;font-size:.9rem}
+.footer{text-align:center;color:var(--muted);font-size:.82rem;padding:10px}
+.nogl{position:absolute;inset:0;display:none;place-items:center;text-align:center;padding:30px;color:var(--muted)}
+@keyframes pulse{0%{box-shadow:0 0 0 0 var(--c),0 4px 14px rgba(0,0,0,.5)}70%{box-shadow:0 0 0 14px transparent,0 4px 14px rgba(0,0,0,.5)}100%{box-shadow:0 0 0 0 transparent,0 4px 14px rgba(0,0,0,.5)}}
+@keyframes blink{50%{opacity:.35}}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes swap{0%{opacity:0;transform:translateX(-18px) scale(.97)}100%{opacity:1;transform:none}}
+@media(max-width:980px){
+.app{display:block;height:auto;overflow:visible}
+.stage{position:sticky;top:0;height:58vh;z-index:5;border-bottom:1px solid var(--line)}
+.panel{height:auto;overflow:visible;border-left:0;padding:20px 16px 40px}
+.card{bottom:40px;padding:12px 14px;max-width:none}
+.card p{font-size:.86rem}
+.hint{display:none}
+.hs .lbl{font-size:.74rem;padding:2px 7px}
+}
+@media(max-width:560px){.metrics{grid-template-columns:1fr}.tbtn{padding:6px 10px;font-size:.8rem}}
+</style>
+</head>
+<body>
+<div class="app">
+<section class="stage" id="stage" aria-label="ฉากจำลอง 3 มิติของวงจรรีเฟล็กซ์">
+<canvas id="c"></canvas>
+<div id="hotspots"></div>
+<div class="hud">
+<div class="badge glass"><i></i>ห้องทดลอง 3D • วงจรรีเฟล็กซ์</div>
+<div class="tools">
+<button class="tbtn" id="playBtn">▶ เล่นสัญญาณ</button>
+<button class="tbtn" id="rotBtn">⟳ หมุนอัตโนมัติ</button>
+<button class="tbtn" id="viewBtn">⌂ มุมมองรวม</button>
+</div>
+</div>
+<div class="card glass" id="card" role="dialog" aria-live="polite"></div>
+<div class="hint">ลากเพื่อหมุน • คลิกขวา/ลากสองนิ้วเพื่อแพน • ล้อเมาส์/บีบนิ้วเพื่อซูม • คลิกจุดเรืองแสงเพื่อดูข้อมูล</div>
+<div class="nogl" id="nogl">เบราว์เซอร์ของคุณไม่รองรับ WebGL หรือโหลดไลบรารี 3D ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรชหน้า</div>
+</section>
+
+<aside class="panel" id="panel">
+<div class="eyebrow">วิทยาศาสตร์ • มัธยมศึกษาปีที่ 2 • ห้องทดลองเสมือน 3 มิติ</div>
+<h1>ระบบประสาท: สัญญาณเดินทางผ่านไขสันหลังได้อย่างไร?</h1>
+<p class="lead">ลองปรับตัวแปร แล้วสังเกตว่าสัญญาณจากมือเดินทางไปยังไขสันหลังและกล้ามเนื้ออย่างไร ในสถานการณ์จำลองการชักมือหนีเมื่อแตะของร้อน</p>
+
+<section class="sec">
+<h2>🎯 เป้าหมายการเรียนรู้</h2>
+<div class="objs">
+<div class="obj"><b>1. ระบุเส้นทาง</b> บอกลำดับการส่งสัญญาณจากตัวรับที่ผิวหนังไปยังไขสันหลังและกล้ามเนื้อได้</div>
+<div class="obj"><b>2. วิเคราะห์ผล</b> อธิบายได้ว่าความเร็วของสัญญาณและความพร้อมของวงจรสะท้อนกลับส่งผลต่อเวลาตอบสนองอย่างไร</div>
+<div class="obj"><b>3. ใช้หลักฐาน</b> เปรียบเทียบค่าจากการทดลองจำลองและอธิบายผลด้วยเหตุผล</div>
+</div>
+</section>
+
+<section class="sec">
+<h2>🧪 ทดลองด้วยตัวเอง</h2>
+<p class="sub">ปรับแถบเลื่อนทั้งสองตัวแปรได้ทันที ฉาก 3 มิติ ความเร็วของสัญญาณ และค่าผลลัพธ์จะเปลี่ยนตามที่ตั้งไว้</p>
+<div class="control">
+<label for="speed">ตัวแปร 1: ความเร็วการส่งสัญญาณ <output id="speedOut">50</output></label>
+<input id="speed" type="range" min="10" max="100" value="50" step="5">
+<div class="small">หน่วยสมมติ: เมตร/วินาที • ค่ายิ่งสูง สัญญาณยิ่งเดินทางเร็ว</div>
+</div>
+<div class="control">
+<label for="readiness">ตัวแปร 2: ความพร้อมของวงจรสะท้อนกลับ <output id="readyOut">70%</output></label>
+<input id="readiness" type="range" min="0" max="100" value="70" step="5">
+<div class="small">หน่วยสมมติ: เปอร์เซ็นต์ • ค่ายิ่งสูง เวลาหน่วงในวงจรยิ่งน้อย</div>
+</div>
+<div class="actions"><button class="btn secondary" id="reset">คืนค่าเริ่มต้น</button><button class="btn primary" id="animateBtn">▶ เล่นสัญญาณอีกครั้ง</button></div>
+<div class="metrics">
+<div class="metric"><span class="small">เวลาตอบสนองโดยประมาณ</span><strong id="timeOut">—</strong><span class="small">มิลลิวินาที</span></div>
+<div class="metric"><span class="small">เวลาหน่วงในวงจร</span><strong id="delayOut">—</strong><span class="small">มิลลิวินาที</span></div>
+<div class="metric"><span class="small">ระดับการตอบสนองในแบบจำลอง</span><strong id="responseOut">—</strong><span class="small">คะแนนจาก 100</span></div>
+</div>
+<p id="interpretation" class="note" aria-live="polite">กำลังคำนวณผลการทดลอง…</p>
+</section>
+
+<section class="sec">
+<h2>🧠 คิดตามเส้นทางสัญญาณ</h2>
+<p class="sub">คลิกแต่ละขั้นเพื่อพากล้องไปยังตำแหน่งในฉาก 3 มิติ และเปิดการ์ดอธิบาย</p>
+<div class="steps" id="steps"></div>
+<p class="note"><b>จำไว้:</b> การชักมือหนีเป็นตัวอย่างของ “รีเฟล็กซ์” หรือการตอบสนองรวดเร็วที่ไม่ต้องรอให้สมองคิดก่อนทุกขั้น สมองยังรับรู้ความเจ็บปวดและช่วยให้เราเรียนรู้จากเหตุการณ์นั้นได้</p>
+</section>
+
+<section class="sec">
+<h2>📈 กราฟเปรียบเทียบผล</h2>
+<p class="sub">กราฟแสดงเวลาตอบสนองโดยประมาณเมื่อเปลี่ยนความเร็วสัญญาณ โดยใช้ค่าความพร้อมของวงจรที่คุณเลือกอยู่</p>
+<div class="chartbox"><svg id="chart" viewBox="0 0 700 280" role="img" aria-label="กราฟความเร็วการส่งสัญญาณเทียบกับเวลาตอบสนอง"></svg></div>
+<p class="small">หมายเหตุ: ตัวเลขทั้งหมดเป็นแบบจำลองเพื่อการเรียนรู้ ไม่ใช่ค่าตรวจวัดทางการแพทย์จริง ในร่างกายยังมีปัจจัยอื่น เช่น ระยะทางและการทำงานของเซลล์ประสาท</p>
+</section>
+
+<section class="sec" id="quiz">
+<h2>📝 แบบทดสอบท้ายกิจกรรม (5 ข้อ)</h2>
+<p class="sub">เลือกคำตอบที่ดีที่สุด แล้วกด “ตรวจคำตอบ” เพื่อดูผลและคำอธิบาย</p>
+<form id="quizForm">
+<div class="question" data-answer="b" data-explain="ตัวรับที่ผิวหนังตรวจพบสิ่งเร้า แล้วเส้นประสาทรับความรู้สึกนำสัญญาณเข้าสู่ไขสันหลังก่อนเกิดการส่งคำสั่งออกไปยังกล้ามเนื้อ">
+<p>1. เมื่อแตะของร้อน เส้นทางใดเรียงลำดับได้เหมาะสมที่สุด?</p>
+<label><input type="radio" name="q1" value="a">กล้ามเนื้อ → สมอง → ผิวหนัง</label>
+<label><input type="radio" name="q1" value="b">ตัวรับที่ผิวหนัง → เส้นประสาทรับความรู้สึก → ไขสันหลัง → เส้นประสาทสั่งการ → กล้ามเนื้อ</label>
+<label><input type="radio" name="q1" value="c">ไขสันหลัง → ผิวหนัง → กล้ามเนื้อ → ตัวรับ</label>
+<div class="feedback"></div></div>
+<div class="question" data-answer="a" data-explain="ในแบบจำลองนี้ เมื่อความเร็วสูงขึ้น สัญญาณใช้เวลาเดินทางน้อยลง จึงทำให้เวลาตอบสนองโดยประมาณสั้นลง หากปัจจัยอื่นคงเดิม">
+<p>2. ถ้าความเร็วการส่งสัญญาณเพิ่มขึ้น แต่ตัวแปรอื่นคงเดิม คาดว่าจะเกิดอะไร?</p>
+<label><input type="radio" name="q2" value="a">เวลาตอบสนองโดยประมาณลดลง</label>
+<label><input type="radio" name="q2" value="b">เวลาตอบสนองต้องเพิ่มขึ้นเสมอ</label>
+<label><input type="radio" name="q2" value="c">สัญญาณจะไม่ผ่านไขสันหลัง</label>
+<div class="feedback"></div></div>
+<div class="question" data-answer="c" data-explain="วงจรที่พร้อมมากขึ้นหมายถึงมีเวลาหน่วงสมมติลดลงในกิจกรรมนี้ จึงตอบสนองได้เร็วขึ้น แต่ไม่ได้หมายความว่าความพร้อมเป็นเปอร์เซ็นต์จริงที่วัดได้ในร่างกาย">
+<p>3. หากเพิ่มความพร้อมของวงจรสะท้อนกลับจาก 30% เป็น 90% ในแบบจำลอง ผลใดเหมาะสมที่สุด?</p>
+<label><input type="radio" name="q3" value="a">เวลาหน่วงเพิ่มขึ้นมาก</label>
+<label><input type="radio" name="q3" value="b">สัญญาณเปลี่ยนเป็นแสง</label>
+<label><input type="radio" name="q3" value="c">เวลาหน่วงลดลงและการตอบสนองเร็วขึ้น</label>
+<div class="feedback"></div></div>
+<div class="question" data-answer="b" data-explain="ไขสันหลังช่วยจัดการเส้นทางรีเฟล็กซ์อย่างรวดเร็ว โดยส่งต่อสัญญาณจากทางรับความรู้สึกไปยังทางสั่งการได้ สมองยังมีบทบาทในการรับรู้และการตอบสนองที่ซับซ้อน">
+<p>4. เหตุใดการชักมือหนีจึงเกิดได้รวดเร็วโดยไม่ต้องรอให้คิดอย่างมีสติก่อน?</p>
+<label><input type="radio" name="q4" value="a">เพราะกล้ามเนื้อทำงานได้โดยไม่ต้องมีสัญญาณประสาท</label>
+<label><input type="radio" name="q4" value="b">เพราะไขสันหลังช่วยเชื่อมต่อวงจรรีเฟล็กซ์ได้รวดเร็ว</label>
+<label><input type="radio" name="q4" value="c">เพราะสัญญาณทุกชนิดต้องหยุดที่หัวใจก่อน</label>
+<div class="feedback"></div></div>
+<div class="question" data-answer="a" data-explain="การทดลองที่ดีเปลี่ยนทีละตัวแปรและคงตัวแปรอื่นไว้ เพื่อให้เห็นได้ชัดว่าความเปลี่ยนแปลงของผลลัพธ์สัมพันธ์กับตัวแปรใด">
+<p>5. ถ้าต้องการทดสอบว่าความเร็วสัญญาณมีผลต่อเวลาตอบสนองหรือไม่ ควรทำอย่างไร?</p>
+<label><input type="radio" name="q5" value="a">เปลี่ยนความเร็วหลายค่า โดยคงความพร้อมของวงจรไว้เท่าเดิม แล้วเปรียบเทียบเวลา</label>
+<label><input type="radio" name="q5" value="b">เปลี่ยนตัวแปรทั้งสองพร้อมกันทุกครั้ง แล้วเดาสาเหตุ</label>
+<label><input type="radio" name="q5" value="c">ดูเฉพาะสีของภาพโดยไม่เปรียบเทียบค่า</label>
+<div class="feedback"></div></div>
+<div class="actions"><button class="btn primary" type="submit">ตรวจคำตอบ</button><button class="btn secondary" type="button" id="showAnswers">แสดงเฉลยละเอียด</button></div>
+<div id="score" class="note" aria-live="polite" style="display:none"></div>
+</form>
+<div class="answer-key" id="answerKey" hidden>
+<h2>เฉลยพร้อมเหตุผล</h2>
+<details><summary>ข้อ 1 — ตอบ ข</summary><p>ตัวรับที่ผิวหนังตรวจพบสิ่งเร้า → เส้นประสาทรับความรู้สึกนำสัญญาณเข้าไขสันหลัง → วงจรในไขสันหลังช่วยส่งต่อ → เส้นประสาทสั่งการนำคำสั่งไปยังกล้ามเนื้อ การเรียงลำดับนี้อธิบายการชักมือหนีได้เหมาะสม</p></details>
+<details><summary>ข้อ 2 — ตอบ ก</summary><p>ถ้าระยะทางเท่าเดิม สัญญาณที่เดินทางเร็วขึ้นใช้เวลาน้อยลง ในแบบจำลองจึงลดเวลาตอบสนองโดยรวม ทั้งนี้เวลาจริงยังขึ้นกับปัจจัยอื่นด้วย</p></details>
+<details><summary>ข้อ 3 — ตอบ ค</summary><p>ความพร้อมที่สูงขึ้นถูกกำหนดให้ลดเวลาหน่วงของวงจรในแบบจำลอง จึงทำให้เวลาตอบสนองสั้นลง ตัวเลขเปอร์เซ็นต์นี้ใช้เพื่อทดลองเปรียบเทียบ ไม่ใช่ค่าทางชีววิทยาที่วัดได้โดยตรง</p></details>
+<details><summary>ข้อ 4 — ตอบ ข</summary><p>รีเฟล็กซ์บางชนิดมีวงจรผ่านไขสันหลัง ทำให้ส่งคำสั่งไปยังกล้ามเนื้อได้รวดเร็ว สมองยังรับรู้เหตุการณ์และมีส่วนกับการตอบสนองอื่น ๆ แต่ไม่จำเป็นต้องรอการตัดสินใจอย่างมีสติก่อนทุกครั้ง</p></details>
+<details><summary>ข้อ 5 — ตอบ ก</summary><p>การเปลี่ยนทีละตัวแปรโดยคงตัวแปรอื่นให้เหมือนเดิม ช่วยให้เปรียบเทียบได้ยุติธรรมขึ้น หากเปลี่ยนทั้งสองพร้อมกัน จะบอกได้ยากว่าปัจจัยใดทำให้ผลเปลี่ยน</p></details>
+</div>
+</section>
+<div class="footer">สื่อการเรียนรู้แบบจำลองเพื่อการศึกษา • ต้องเชื่อมต่ออินเทอร์เน็ตครั้งแรกเพื่อโหลดไลบรารี 3D</div>
+</aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const speed=$('#speed'),readiness=$('#readiness'),speedOut=$('#speedOut'),readyOut=$('#readyOut');
+const timeOut=$('#timeOut'),delayOut=$('#delayOut'),responseOut=$('#responseOut'),interpretation=$('#interpretation');
+
+const HS=[
+{name:'ผิวหนัง (ตัวรับ)',tag:'ขั้นที่ 1',color:'#fbbf24',title:'ตัวรับสิ่งเร้าที่ผิวหนัง',text:'ผิวหนังมีตัวรับที่ไวต่อความร้อน ความเจ็บ และการสัมผัส เมื่อมือแตะของร้อน ตัวรับจะเปลี่ยนสิ่งเร้าให้เป็นสัญญาณประสาท',fact:'💡 สัญญาณเริ่มต้นที่ปลายประสาทรับความรู้สึกในผิวหนังของมือ',tip:'ขั้นที่ 1',desc:'ตัวรับที่ผิวหนังตรวจพบความร้อนหรือสิ่งเร้า',cam:[-3.2,2.2,7.5],tar:[-6,0.3,0]},
+{name:'เส้นประสาทรับความรู้สึก',tag:'ขั้นที่ 2',color:'#60a5fa',title:'เส้นประสาทรับความรู้สึก',text:'นำสัญญาณจากตัวรับเข้าสู่ไขสันหลัง เรียกว่าทางนำเข้า สัญญาณวิ่งไปตามใยประสาทของเซลล์ประสาทรับความรู้สึก',fact:'💡 ในแบบจำลอง ยิ่งความเร็วสูง เวลาเดินทางของช่วงนี้ยิ่งสั้น',tip:'ขั้นที่ 2',desc:'เส้นประสาทรับความรู้สึกนำสัญญาณเข้าสู่ไขสันหลัง',cam:[-3,2,8],tar:[-3,0,0]},
+{name:'ไขสันหลัง',tag:'ขั้นที่ 3',color:'#f472b6',title:'ไขสันหลัง: ศูนย์เชื่อมต่อรีเฟล็กซ์',text:'ไขสันหลังช่วยเชื่อมต่อสัญญาณผ่านเซลล์ประสาทและส่งคำสั่งออกไปทางเส้นประสาทสั่งการ โดยไม่ต้องรอให้สมองตัดสินใจก่อนทุกขั้น',fact:'💡 ความพร้อมของวงจรสะท้อนกลับในแบบจำลองมีผลต่อ “เวลาหน่วง” ที่จุดนี้',tip:'ขั้นที่ 3',desc:'ไขสันหลังช่วยเชื่อมต่อสัญญาณผ่านเซลล์ประสาทและส่งคำสั่งออก',cam:[2.5,1.2,7],tar:[0,0,0]},
+{name:'เส้นประสาทสั่งการ',tag:'ขั้นที่ 4',color:'#2dd4bf',title:'เส้นประสาทสั่งการ',text:'นำคำสั่งจากไขสันหลังออกไปยังกล้ามเนื้อ เรียกว่าทางนำออก ทำให้กล้ามเนื้อรับรู้ว่าต้องหดตัว',fact:'💡 สัญญาณสั่งการในฉากแสดงด้วยแสงสีเขียวอมฟ้า',tip:'ขั้นที่ 4',desc:'เส้นประสาทสั่งการส่งคำสั่งไปยังกล้ามเนื้อ ทำให้ดึงมือหนี',cam:[3,2,8],tar:[3,0,0]},
+{name:'กล้ามเนื้อ (ผลลัพธ์)',tag:'การตอบสนอง',color:'#fb7185',title:'กล้ามเนื้อ: การตอบสนอง',text:'เมื่อได้รับคำสั่ง กล้ามเนื้อจะหดตัว ดึงมือออกจากสิ่งร้อนอย่างรวดเร็ว สังเกตกล้ามเนื้อในฉากที่สั้นและพองขึ้นขณะหดตัว',fact:'💡 การตอบสนองนี้ช่วยลดอันตรายก่อนที่เราจะทันรู้สึกเจ็บเต็มที่',tip:'ผลลัพธ์',desc:'กล้ามเนื้อหดตัว ดึงมือออกจากสิ่งร้อน',cam:[8.5,2.2,7],tar:[6.3,-0.2,0]},
+{name:'สมอง (รับรู้และเรียนรู้)',tag:'ส่วนเสริม',color:'#c4b5fd',title:'สมอง: รับรู้ความเจ็บปวด',text:'ไขสันหลังยังส่งข้อมูลขึ้นไปยังสมองด้วย ทำให้เรารับรู้ความเจ็บปวด จดจำเหตุการณ์ และเรียนรู้ที่จะระวังครั้งต่อไป',fact:'💡 สมองไม่ได้ถูกข้ามไปเลย เพียงแต่รีเฟล็กซ์ไม่ต้องรอสมองก่อนตอบสนอง',tip:'สมอง',desc:'สมองรับรู้ความเจ็บปวดและช่วยให้เราเรียนรู้จากเหตุการณ์นั้น',cam:[3,6.8,8],tar:[0,5.3,0]}
+];
+
+const stepsBox=$('#steps');
+HS.forEach((h,i)=>{
+ const b=document.createElement('button');b.type='button';b.className='step';b.style.setProperty('--c',h.color);
+ b.innerHTML=`<span class="n">${i<4?i+1:i===4?'✓':'🧠'}</span><span><b>${h.tip}: ${h.name}</b><span class="t">${h.desc}</span></span>`;
+ b.addEventListener('click',()=>selectHs(i));stepsBox.appendChild(b);
+});
+const stepBtns=[...stepsBox.children];
+
+let model={};
+function calc(){
+ const v=+speed.value,r=+readiness.value;
+ const travel=1000*(1/v),delay=20+(100-r)*0.8,total=travel+delay;
+ const response=Math.max(0,Math.min(100,Math.round(100-total/2.2)));
+ speedOut.textContent=v;readyOut.textContent=r+'%';
+ timeOut.textContent=total.toFixed(1);delayOut.textContent=delay.toFixed(1);responseOut.textContent=response;
+ interpretation.textContent=v>=70&&r>=70
+  ?'สังเกต: สัญญาณเดินทางเร็วและวงจรพร้อมมาก เวลาตอบสนองในแบบจำลองจึงค่อนข้างสั้น'
+  :v<=30&&r<=35
+  ?'สังเกต: สัญญาณเดินทางช้ากว่าและวงจรมีเวลาหน่วงมากขึ้น จึงใช้เวลาตอบสนองนานกว่า'
+  :'สังเกต: เมื่อปรับตัวแปร ให้ดูว่าเวลาการเดินทางและเวลาหน่วงรวมกันเปลี่ยนอย่างไร แล้วเปรียบเทียบกับค่าเดิม';
+ drawChart(v,r);
+ if(model.play)model.play();
+}
+function drawChart(currentV,r){
+ const svg=$('#chart'),W=700,H=280,L=65,R=22,T=20,B=48,pw=W-L-R,ph=H-T-B;
+ const vals=[];for(let v=10;v<=100;v+=10){vals.push({v,t:1000/v+20+(100-r)*.8})}
+ const maxT=Math.ceil(Math.max(...vals.map(x=>x.t))/10)*10;
+ const x=v=>L+(v-10)/90*pw,y=t=>T+ph-(t/maxT)*ph;
+ let s='';
+ for(let i=0;i<=4;i++){const val=maxT*i/4,yy=y(val);s+=`<line x1="${L}" y1="${yy}" x2="${W-R}" y2="${yy}" stroke="#2a3b63" stroke-dasharray="4 4"/><text x="${L-10}" y="${yy+4}" text-anchor="end" font-size="12" fill="#93a7c6">${val.toFixed(0)}</text>`}
+ s+=`<line x1="${L}" y1="${T}" x2="${L}" y2="${T+ph}" stroke="#5b7094"/><line x1="${L}" y1="${T+ph}" x2="${W-R}" y2="${T+ph}" stroke="#5b7094"/>`;
+ for(let v=10;v<=100;v+=10)s+=`<text x="${x(v)}" y="${H-22}" text-anchor="middle" font-size="12" fill="#93a7c6">${v}</text>`;
+ s+=`<text x="${W/2}" y="${H-4}" text-anchor="middle" font-size="13" fill="#e8effc">ความเร็วสัญญาณ (หน่วยสมมติ)</text><text x="17" y="${H/2}" transform="rotate(-90 17 ${H/2})" text-anchor="middle" font-size="13" fill="#e8effc">เวลาตอบสนอง (มิลลิวินาที)</text>`;
+ const pts=vals.map(o=>`${x(o.v)},${y(o.t)}`).join(' ');
+ s+=`<defs><linearGradient id="lg" x1="0" x2="1"><stop offset="0" stop-color="#60a5fa"/><stop offset="1" stop-color="#2dd4bf"/></linearGradient></defs><polyline points="${pts}" fill="none" stroke="url(#lg)" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>`;
+ vals.forEach(o=>{const c=o.v===currentV;s+=`<circle cx="${x(o.v)}" cy="${y(o.t)}" r="${c?7:3.5}" fill="${c?'#fbbf24':'#60a5fa'}" stroke="${c?'#fff':'none'}" stroke-width="2"/>`});
+ const cur=vals.find(o=>o.v===currentV);
+ s+=`<text x="${Math.min(W-R-5,x(currentV)+12)}" y="${Math.max(T+14,y(cur.t)-12)}" font-size="12" fill="#fde9b0" ${x(currentV)>W-150?'text-anchor="end"':''}>ค่าปัจจุบัน ${cur.t.toFixed(1)}</text>`;
+ svg.innerHTML=s;
+}
+
+(function init3D(){
+ if(!window.THREE||!THREE.OrbitControls){$('#nogl').style.display='grid';return}
+ const stage=$('#stage'),canvas=$('#c');
+ let renderer;
+ try{renderer=new THREE.WebGLRenderer({canvas,antialias:true})}catch(e){$('#nogl').style.display='grid';return}
+ renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+ renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+ renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+ const scene=new THREE.Scene();scene.fog=new THREE.Fog(0x0a1226,26,60);
+ const camera=new THREE.PerspectiveCamera(45,1,.1,200);
+ const controls=new THREE.OrbitControls(camera,canvas);
+ controls.enableDamping=true;controls.dampingFactor=.07;controls.enablePan=true;controls.enableZoom=true;controls.minDistance=3.5;controls.maxDistance=34;controls.maxPolarAngle=Math.PI*.58;controls.autoRotateSpeed=1.1;
+
+ scene.add(new THREE.HemisphereLight(0xa8c8ff,0x1a2347,.75));
+ const sun=new THREE.DirectionalLight(0xffffff,1.15);sun.position.set(7,12,9);sun.castShadow=true;
+ sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-16;sun.shadow.camera.right=16;sun.shadow.camera.top=14;sun.shadow.camera.bottom=-8;sun.shadow.camera.near=1;sun.shadow.camera.far=45;sun.shadow.bias=-.0004;
+ scene.add(sun);
+ const rim=new THREE.PointLight(0x2dd4bf,.9,40);rim.position.set(-10,4,-8);scene.add(rim);
+ const rim2=new THREE.PointLight(0x818cf8,.7,40);rim2.position.set(10,6,-6);scene.add(rim2);
+
+ const floor=new THREE.Mesh(new THREE.CircleGeometry(20,64),new THREE.MeshStandardMaterial({color:0x0d1730,roughness:.55,metalness:.35}));
+ floor.rotation.x=-Math.PI/2;floor.position.y=-4;floor.receiveShadow=true;scene.add(floor);
+ const grid=new THREE.GridHelper(40,40,0x2563eb,0x172a52);grid.position.y=-3.99;grid.material.transparent=true;grid.material.opacity=.4;scene.add(grid);
+
+ const dustGeo=new THREE.BufferGeometry(),dp=[];
+ for(let i=0;i<260;i++)dp.push((Math.random()-.5)*34,Math.random()*14-3,(Math.random()-.5)*22);
+ dustGeo.setAttribute('position',new THREE.Float32BufferAttribute(dp,3));
+ const dust=new THREE.Points(dustGeo,new THREE.PointsMaterial({color:0x8ab4ff,size:.06,transparent:true,opacity:.55}));scene.add(dust);
+
+ const cordGroup=new THREE.Group();scene.add(cordGroup);
+ const cordOuter=new THREE.Mesh(new THREE.CylinderGeometry(.95,.95,8,48,1,true),new THREE.MeshPhysicalMaterial({color:0xdbe6ff,transparent:true,opacity:.32,roughness:.2,metalness:0,clearcoat:1,side:THREE.DoubleSide,depthWrite:false}));
+ cordGroup.add(cordOuter);
+ const cordCore=new THREE.Mesh(new THREE.CylinderGeometry(.5,.5,8,32),new THREE.MeshStandardMaterial({color:0xf472b6,emissive:0xbe185d,emissiveIntensity:.25,roughness:.5}));
+ cordCore.castShadow=true;cordGroup.add(cordCore);
+ const cordMat=new THREE.MeshStandardMaterial({color:0xe5ecfb,roughness:.35,metalness:.2});
+ for(let i=-3;i<=3;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(1.08,.1,16,48),cordMat);ring.rotation.x=Math.PI/2;ring.position.y=i*1.15;ring.castShadow=true;cordGroup.add(ring)}
+ const inter=new THREE.Mesh(new THREE.SphereGeometry(.34,32,32),new THREE.MeshStandardMaterial({color:0xfff1f8,emissive:0xf472b6,emissiveIntensity:.5,roughness:.3}));
+ cordGroup.add(inter);
+
+ const brainGeo=new THREE.IcosahedronGeometry(1.45,4),bp=brainGeo.attributes.position,vv=new THREE.Vector3();
+ for(let i=0;i<bp.count;i++){
+  vv.fromBufferAttribute(bp,i).normalize();
+  const n=Math.sin(vv.x*6)*Math.sin(vv.y*6)*Math.sin(vv.z*6)*.1+Math.sin(vv.x*13+vv.y*9)*.045+Math.cos(vv.z*12-vv.y*8)*.04;
+  vv.multiplyScalar(1.45+n);bp.setXYZ(i,vv.x*1.15,vv.y*.85,vv.z);
+ }
+ brainGeo.computeVertexNormals();
+ const brainMat=new THREE.MeshPhysicalMaterial({color:0xf2a7c3,roughness:.5,clearcoat:.5,emissive:0x6d28d9,emissiveIntensity:.08});
+ const brain=new THREE.Mesh(brainGeo,brainMat);brain.position.set(0,5.7,0);brain.castShadow=true;scene.add(brain);
+ const stem=new THREE.Mesh(new THREE.CylinderGeometry(.35,.45,1.3,24),new THREE.MeshStandardMaterial({color:0xe8b4c8,roughness:.5}));
+ stem.position.set(0,4.1,0);stem.castShadow=true;scene.add(stem);
+
+ const ascGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,.4,.95),new THREE.Vector3(0,2,1.1),new THREE.Vector3(0,3.6,.7),new THREE.Vector3(0,4.8,.5)]);
+ const asc=new THREE.Line(ascGeo,new THREE.LineDashedMaterial({color:0xc4b5fd,dashSize:.22,gapSize:.16,transparent:true,opacity:.8}));asc.computeLineDistances();scene.add(asc);
+
+ const curveA=new THREE.CatmullRomCurve3([new THREE.Vector3(-5.2,.1,0),new THREE.Vector3(-3.7,-.9,.6),new THREE.Vector3(-2,.7,-.4),new THREE.Vector3(-.5,0,0)]);
+ const curveB=new THREE.CatmullRomCurve3([new THREE.Vector3(.5,0,0),new THREE.Vector3(2,-.7,.4),new THREE.Vector3(3.7,.8,-.3),new THREE.Vector3(5.3,-.2,0)]);
+ const sensMat=new THREE.MeshStandardMaterial({color:0x3b82f6,emissive:0x2563eb,emissiveIntensity:.3,roughness:.35,metalness:.2});
+ const motMat=new THREE.MeshStandardMaterial({color:0x14b8a6,emissive:0x0d9488,emissiveIntensity:.3,roughness:.35,metalness:.2});
+ const sens=new THREE.Mesh(new THREE.TubeGeometry(curveA,64,.14,16),sensMat);
+ const mot=new THREE.Mesh(new THREE.TubeGeometry(curveB,64,.14,16),motMat);
+ sens.castShadow=mot.castShadow=true;scene.add(sens,mot);
+ const sheathMat=new THREE.MeshPhysicalMaterial({color:0xffffff,transparent:true,opacity:.14,roughness:.2,depthWrite:false});
+ scene.add(new THREE.Mesh(new THREE.TubeGeometry(curveA,64,.26,16),sheathMat),new THREE.Mesh(new THREE.TubeGeometry(curveB,64,.26,16),sheathMat));
+
+ const hand=new THREE.Group();scene.add(hand);
+ const skinMat=new THREE.MeshStandardMaterial({color:0xf3b790,roughness:.6});
+ const palm=new THREE.Mesh(new THREE.SphereGeometry(1,40,32),skinMat);palm.scale.set(1.05,.45,.8);palm.castShadow=true;hand.add(palm);
+ for(let i=0;i<4;i++){
+  const f=new THREE.Mesh(new THREE.CylinderGeometry(.14,.12,1.1,16),skinMat);
+  f.rotation.z=Math.PI/2+(i-1.5)*.12;f.rotation.y=(i-1.5)*.1;f.position.set(-1.35,.05,(i-1.5)*.34);f.castShadow=true;hand.add(f);
+  const tip=new THREE.Mesh(new THREE.SphereGeometry(.14,16,16),skinMat);tip.position.set(-1.9,.05+(i-1.5)*0,(i-1.5)*.34);hand.add(tip);
+ }
+ const thumb=new THREE.Mesh(new THREE.CylinderGeometry(.16,.13,.8,16),skinMat);thumb.rotation.set(.3,0,-.7);thumb.position.set(-.5,.1,.85);hand.add(thumb);
+ const receptor=new THREE.Mesh(new THREE.SphereGeometry(.2,24,24),new THREE.MeshStandardMaterial({color:0xfbbf24,emissive:0xf59e0b,emissiveIntensity:.8}));
+ receptor.position.set(.2,.35,0);hand.add(receptor);
+ hand.position.set(-6,.2,0);
+
+ const hotBase=new THREE.Mesh(new THREE.CylinderGeometry(.9,1.1,.35,32),new THREE.MeshStandardMaterial({color:0x374151,roughness:.4,metalness:.7}));
+ hotBase.position.set(-6,2.1,0);hotBase.castShadow=true;scene.add(hotBase);
+ const hotMat=new THREE.MeshStandardMaterial({color:0xff7a1a,emissive:0xff4d00,emissiveIntensity:1.4,roughness:.4});
+ const hot=new THREE.Mesh(new THREE.SphereGeometry(.65,32,32),hotMat);hot.position.set(-6,2.85,0);scene.add(hot);
+ const flame=new THREE.Mesh(new THREE.ConeGeometry(.35,.9,24),new THREE.MeshBasicMaterial({color:0xffd166,transparent:true,opacity:.85}));flame.position.set(-6,3.7,0);scene.add(flame);
+ const hotLight=new THREE.PointLight(0xff7a1a,1.8,9);hotLight.position.set(-6,3,0);scene.add(hotLight);
+ const stand=new THREE.Mesh(new THREE.CylinderGeometry(.12,.12,6,12),new THREE.MeshStandardMaterial({color:0x4b5563,metalness:.7,roughness:.4}));
+ stand.position.set(-6,-1,-1.2);stand.castShadow=true;scene.add(stand);
+ const arm=new THREE.Mesh(new THREE.BoxGeometry(.2,.2,1.2),new THREE.MeshStandardMaterial({color:0x4b5563,metalness:.7,roughness:.4}));arm.position.set(-6,2,-.6);scene.add(arm);
+
+ const muscleMat=new THREE.MeshStandardMaterial({color:0xc2415c,roughness:.45,emissive:0x7f1d1d,emissiveIntensity:.15});
+ const muscle=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),muscleMat);muscle.castShadow=true;scene.add(muscle);
+ muscle.position.set(6.6,-.2,0);
+ for(let i=-2;i<=2;i++){const fib=new THREE.Mesh(new THREE.TorusGeometry(.75,.025,8,40),new THREE.MeshBasicMaterial({color:0xfecdd3,transparent:true,opacity:.35}));fib.position.set(i*.28,0,0);fib.rotation.y=Math.PI/2;fib.scale.set(1,.7,1);muscle.add(fib)}
+ const tendon=new THREE.Mesh(new THREE.CylinderGeometry(.18,.12,1.6,16),new THREE.MeshStandardMaterial({color:0xe5e7eb,roughness:.5}));
+ tendon.rotation.z=Math.PI/2;tendon.position.set(8.6,-.2,0);scene.add(tendon);
+
+ const sigMat=new THREE.MeshBasicMaterial({color:0xfbbf24});
+ const sig=new THREE.Mesh(new THREE.SphereGeometry(.26,24,24),sigMat);scene.add(sig);
+ const sigLight=new THREE.PointLight(0xfbbf24,2.5,6);scene.add(sigLight);
+ const halo=new THREE.Mesh(new THREE.SphereGeometry(.5,24,24),new THREE.MeshBasicMaterial({color:0xfbbf24,transparent:true,opacity:.22,depthWrite:false}));scene.add(halo);
+ const trail=[];
+ for(let i=0;i<10;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.2,12,12),new THREE.MeshBasicMaterial({color:0xfbbf24,transparent:true,opacity:.5-i*.045}));m.scale.setScalar(1-i*.08);scene.add(m);trail.push(m)}
+ const hist=[];
+ const ring=new THREE.Mesh(new THREE.RingGeometry(1.15,1.35,48),new THREE.MeshBasicMaterial({color:0xf472b6,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false}));
+ ring.position.set(0,0,0);scene.add(ring);
+
+ const hsPos=[
+  ()=>hand.position.clone().add(new THREE.Vector3(-.3,.9,0)),
+  ()=>curveA.getPoint(.5).clone().add(new THREE.Vector3(0,.7,0)),
+  ()=>new THREE.Vector3(.9,.9,.5),
+  ()=>curveB.getPoint(.5).clone().add(new THREE.Vector3(0,.7,0)),
+  ()=>muscle.position.clone().add(new THREE.Vector3(0,1.1,0)),
+  ()=>brain.position.clone().add(new THREE.Vector3(1.8,.6,0))
+ ];
+ const hsBox=$('#hotspots'),hsEls=[];
+ HS.forEach((h,i)=>{
+  const b=document.createElement('button');b.type='button';b.className='hs';b.style.setProperty('--c',h.color);
+  b.innerHTML=`<span class="dotp"></span><span class="lbl">${h.name}</span>`;
+  b.setAttribute('aria-label',h.name);
+  b.addEventListener('click',()=>selectHs(i));hsBox.appendChild(b);hsEls.push(b);
+ });
+
+ const card=$('#card');let current=-1;
+ function renderCard(i){
+  const h=HS[i];card.style.setProperty('--c',h.color);
+  card.innerHTML=`<span class="tag">${h.tag}</span><h3>${h.title}</h3><p>${h.text}</p><div class="fact">${h.fact}</div><div class="nav"><button type="button" data-a="prev">◀ ก่อนหน้า</button><button type="button" data-a="next">ถัดไป ▶</button><button type="button" class="x" data-a="close">ปิด ✕</button></div>`;
+  card.classList.remove('swap');void card.offsetWidth;card.classList.add('show','swap');
+ }
+ card.addEventListener('click',e=>{
+  const a=e.target.dataset&&e.target.dataset.a;
+  if(a==='prev')selectHs((current+HS.length-1)%HS.length);
+  else if(a==='next')selectHs((current+1)%HS.length);
+  else if(a==='close'){current=-1;card.classList.remove('show');hsEls.forEach(x=>x.classList.remove('active'));stepBtns.forEach(x=>x.classList.remove('live'));flyTo(defaultView())}
+ });
+
+ let tween=null;
+ function defaultView(){const a=stage.clientWidth/Math.max(1,stage.clientHeight),d=19*Math.max(1,1.6/a);return{cam:[0,3.2,d],tar:[0,1,0]}}
+ function flyTo(v,dur=1100){
+  tween={t0:performance.now(),dur,fp:camera.position.clone(),ft:controls.target.clone(),tp:new THREE.Vector3(...v.cam),tt:new THREE.Vector3(...v.tar)};
+ }
+ controls.addEventListener('start',()=>{tween=null});
+ function selectHs(i){
+  current=i;renderCard(i);
+  hsEls.forEach((x,k)=>x.classList.toggle('active',k===i));
+  stepBtns.forEach((x,k)=>x.classList.toggle('live',k===i));
+  flyTo({cam:HS[i].cam,tar:HS[i].tar});
+ }
+ window.selectHs=selectHs;
+
+ const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+ let playing=false,t0=0,dur=2000,p=0,endT=-1e9,react=0,sensG=0,motG=0,cordG=0,liveIdx=-1,manualLive=false;
+ function play(){
+  const v=+speed.value,r=+readiness.value;
+  dur=Math.max(1400,(1800-v*9-r*3)*2.2);t0=performance.now();playing=true;p=0;
+  $('#playBtn').classList.add('on');
+ }
+ model.play=play;
+ $('#animateBtn').addEventListener('click',play);
+ $('#playBtn').addEventListener('click',play);
+ $('#reset').addEventListener('click',()=>{speed.value=50;readiness.value=70;calc()});
+ $('#viewBtn').addEventListener('click',()=>{current=-1;card.classList.remove('show');hsEls.forEach(x=>x.classList.remove('active'));flyTo(defaultView())});
+ $('#rotBtn').addEventListener('click',e=>{controls.autoRotate=!controls.autoRotate;e.currentTarget.classList.toggle('on',controls.autoRotate)});
+ speed.addEventListener('input',calc);readiness.addEventListener('input',calc);
+
+ function resize(){
+  const w=stage.clientWidth,h=stage.clientHeight;
+  renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();
+ }
+ new ResizeObserver(()=>{resize();if(!tween&&current<0&&!userMoved){const d=defaultView();camera.position.set(...d.cam);controls.target.set(...d.tar)}}).observe(stage);
+ let userMoved=false;controls.addEventListener('start',()=>{userMoved=true});
+ resize();
+ const dv=defaultView();camera.position.set(...dv.cam);controls.target.set(...dv.tar);controls.update();
+
+ const tmp=new THREE.Vector3();
+ function frame(now){
+  requestAnimationFrame(frame);
+  if(playing){p=(now-t0)/dur;if(p>=1){p=1;playing=false;endT=now;$('#playBtn').classList.remove('on')}}
+  if(playing||now-endT<250){
+   let pos;
+   if(p<.48)pos=curveA.getPoint(p/.48);
+   else if(p<.58){const k=(p-.48)/.1;pos=tmp.copy(curveA.getPoint(1)).lerp(curveB.getPoint(0),k).clone()}
+   else pos=curveB.getPoint(Math.min(1,(p-.58)/.42));
+   if(p<.48)sigMat.color.set(0x60a5fa);else if(p<.58)sigMat.color.set(0xf472b6);else sigMat.color.set(0x2dd4bf);
+   sigLight.color.copy(sigMat.color);halo.material.color.copy(sigMat.color);
+   sig.position.copy(pos);halo.position.copy(pos);sigLight.position.copy(pos);
+   halo.scale.setScalar(1+Math.sin(now*.015)*.2);
+   sig.visible=halo.visible=playing;sigLight.intensity=playing?2.5:0;
+   hist.unshift(pos.clone());if(hist.length>40)hist.pop();
+   trail.forEach((m,i)=>{const q=hist[(i+1)*3];m.visible=playing&&!!q;if(q)m.position.copy(q)});
+  }else{sig.visible=halo.visible=false;sigLight.intensity=0;trail.forEach(m=>m.visible=false)}
+  if(!playing&&now-endT>=250){hist.length=0}
+  const sT=playing&&p<.5?1:0,mT=playing&&p>.56?1:0,cT=playing&&p>.44&&p<.64?1:0;
+  sensG+=(sT-sensG)*.12;motG+=(mT-motG)*.12;cordG+=(cT-cordG)*.15;
+  sensMat.emissiveIntensity=.3+1.1*sensG;motMat.emissiveIntensity=.3+1.1*motG;
+  cordCore.material.emissiveIntensity=.25+.9*cordG;inter.material.emissiveIntensity=.5+1.5*cordG;
+  ring.material.opacity=cordG*.6;ring.scale.setScalar(1+cordG*.5+Math.sin(now*.01)*.05*cordG);
+  const tgt=(playing&&p>.88)||(!playing&&now-endT<1500)?1:0;
+  react+=(tgt-react)*.1;
+  hand.position.set(-6-1.6*react,.2-1.7*react,0);hand.rotation.z=.55*react;
+  receptor.material.emissiveIntensity=.8+(playing&&p<.1?2.5:0)+Math.sin(now*.01)*.2;
+  muscle.scale.set(1.9-.6*react,.85+.35*react,.85+.35*react);
+  muscleMat.emissiveIntensity=.15+.7*react;
+  hotLight.intensity=1.8+Math.sin(now*.02)*.35;hot.material.emissiveIntensity=1.3+Math.sin(now*.017)*.25;
+  flame.scale.set(1+Math.sin(now*.03)*.12,1+Math.sin(now*.025+1)*.2,1+Math.sin(now*.03)*.12);
+  brain.rotation.y=Math.sin(now*.0004)*.15;brain.material.emissiveIntensity=.08+(playing&&p>.55?.25:0);
+  dust.rotation.y=now*.00002;
+  let idx=-1;
+  if(playing){idx=p<.1?0:p<.46?1:p<.6?2:p<.9?3:4}
+  if(idx!==liveIdx){liveIdx=idx;stepBtns.forEach((b,k)=>b.classList.toggle('live',idx>=0?k===idx:k===current))}
+  if(tween){
+   const k=Math.min(1,(now-tween.t0)/tween.dur),e=ease(k);
+   camera.position.lerpVectors(tween.fp,tween.tp,e);controls.target.lerpVectors(tween.ft,tween.tt,e);
+   if(k>=1)tween=null;
+  }
+  controls.update();
+  renderer.render(scene,camera);
+  const w=stage.clientWidth,h=stage.clientHeight;
+  hsPos.forEach((fn,i)=>{
+   const v=fn().project(camera);
+   const el=hsEls[i];
+   if(v.z>1||v.z<-1){el.style.visibility='hidden';return}
+   el.style.visibility='visible';
+   el.style.transform=`translate(${((v.x*.5+.5)*w-11).toFixed(1)}px,${((-v.y*.5+.5)*h-11).toFixed(1)}px)`;
+  });
+ }
+ requestAnimationFrame(frame);
+ setTimeout(()=>{calc();setTimeout(()=>selectHs(0),2800)},400);
+})();
+
+if(!model.play)calc();
+drawChart(+speed.value,+readiness.value);
+
+$('#quizForm').addEventListener('submit',e=>{
+ e.preventDefault();let score=0;
+ document.querySelectorAll('.question').forEach(q=>{
+  const selected=q.querySelector('input:checked'),fb=q.querySelector('.feedback');
+  const correct=selected&&selected.value===q.dataset.answer;
+  if(correct)score++;
+  fb.className='feedback show '+(correct?'correct':'incorrect');
+  const answerLabel=q.querySelector(`input[value="${q.dataset.answer}"]`).parentElement.textContent.trim();
+  fb.textContent=(correct?'ถูกต้อง! ':'ยังไม่ถูกต้อง ')+(selected?'':'คุณยังไม่ได้เลือกคำตอบ ข้อที่ถูกคือ: '+answerLabel+'. ')+q.dataset.explain;
+ });
+ const box=$('#score');box.style.display='block';
+ box.textContent=`คุณได้ ${score} จาก 5 คะแนน (${score*20}%) — ${score===5?'ยอดเยี่ยม! อธิบายเส้นทางสัญญาณได้ดี':score>=3?'ทำได้ดี ลองอ่านคำอธิบายข้อที่พลาดอีกครั้ง':'ลองทบทวนภาพเส้นทางสัญญาณและเฉลย แล้วทำแบบทดสอบอีกครั้ง'}`;
+ $('#answerKey').hidden=false;
+});
+$('#showAnswers').addEventListener('click',()=>{const k=$('#answerKey');k.hidden=false;k.scrollIntoView({behavior:'smooth',block:'nearest'})});
+</script>
+</body>
+</html>
